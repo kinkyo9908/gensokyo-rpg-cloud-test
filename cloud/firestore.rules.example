@@ -1,0 +1,24 @@
+rules_version = '2';
+service cloud.firestore {
+ match /databases/{database}/documents {
+  match /users/{userId} {
+   allow read: if request.auth != null && request.auth.uid == userId;
+   allow create: if request.auth != null && request.auth.uid == userId
+     && valid() && request.resource.data.revision == 1;
+   allow update: if request.auth != null && request.auth.uid == userId
+     && valid() && request.resource.data.revision == resource.data.revision + 1;
+   function valid() {
+    return request.resource.data.keys().hasOnly(['schemaVersion','revision','saveJson','saveHash','writerDevice','updatedAt'])
+      && request.resource.data.schemaVersion == 1
+      && request.resource.data.revision is int
+      && request.resource.data.saveJson is string
+      && request.resource.data.saveJson.size() <= 921600
+      && request.resource.data.saveHash is string
+      && request.resource.data.saveHash.matches('^[a-f0-9]{64}$')
+      && request.resource.data.writerDevice is string
+      && request.resource.data.writerDevice.size() <= 128
+      && request.resource.data.updatedAt == request.time;
+   }
+  }
+ }
+}
